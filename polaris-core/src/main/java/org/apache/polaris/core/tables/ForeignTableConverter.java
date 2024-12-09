@@ -19,9 +19,15 @@
 package org.apache.polaris.core.tables;
 
 import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.polaris.core.entity.ForeignTableEntity;
 
 public interface ForeignTableConverter {
 
   Table convert(ForeignTableEntity entity) throws ConversionFailureException;
+
+  static ForeignTableConverter of(Catalog baseCatalog, TableIdentifier tableIdentifier) {
+    return new DeltaTableConverter();
+  }
 }

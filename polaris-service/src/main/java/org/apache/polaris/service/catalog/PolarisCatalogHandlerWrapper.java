@@ -78,6 +78,9 @@ import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
+import org.apache.polaris.core.entity.ForeignTableEntity;
+import org.apache.polaris.core.entity.PolarisBaseEntity;
+import org.apache.polaris.core.entity.PolarisEntity;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.persistence.PolarisEntityManager;
@@ -88,6 +91,7 @@ import org.apache.polaris.core.persistence.resolver.PolarisResolutionManifest;
 import org.apache.polaris.core.persistence.resolver.ResolverPath;
 import org.apache.polaris.core.persistence.resolver.ResolverStatus;
 import org.apache.polaris.core.storage.PolarisStorageActions;
+import org.apache.polaris.core.tables.ForeignTableConverter;
 import org.apache.polaris.service.context.CallContextCatalogFactory;
 import org.apache.polaris.service.types.NotificationRequest;
 import org.slf4j.Logger;
@@ -283,6 +287,34 @@ public class PolarisCatalogHandlerWrapper {
     PolarisResolvedPathWrapper target = resolutionManifest.getResolvedPath(namespace, true);
     if (target == null) {
       throw new NoSuchNamespaceException("Namespace does not exist: %s", namespace);
+    }
+    authorizer.authorizeOrThrow(
+        authenticatedPrincipal,
+        resolutionManifest.getAllActivatedCatalogRoleAndPrincipalRoles(),
+        op,
+        target,
+        null /* secondary */);
+
+    initializeCatalog();
+  }
+
+  private void authorizeForeignTableOperationOrThrow(
+      PolarisAuthorizableOperation op, TableIdentifier identifier) {
+    resolutionManifest =
+        entityManager.prepareResolutionManifest(callContext, authenticatedPrincipal, catalogName);
+
+    // The underlying Catalog is also allowed to fetch "fresh" versions of the target entity.
+    resolutionManifest.addPassthroughPath(
+        new ResolverPath(
+            PolarisCatalogHelpers.tableIdentifierToList(identifier),
+            PolarisEntityType.FOREIGN_TABLE,
+            true /* optional */),
+        identifier);
+    resolutionManifest.resolveAll();
+    PolarisResolvedPathWrapper target =
+        resolutionManifest.getResolvedPath(identifier, PolarisEntitySubType.FOREIGN_TABLE, true);
+    if (target == null) {
+        throw new NoSuchTableException("ForeignTable does not exist: %s", identifier);
     }
     authorizer.authorizeOrThrow(
         authenticatedPrincipal,
@@ -795,16 +827,22 @@ public class PolarisCatalogHandlerWrapper {
   public LoadTableResponse loadTable(TableIdentifier tableIdentifier, String snapshots) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LOAD_TABLE;
 
-    // TODO: if it's ForeignTable, call convertTable
-    // if (foreignTable) {
-    //   authorizeBasicForeignOperationOrThrow(op, PolarisEntitySubType.FOREIGN_TABLE,
-    // tableIdentifier);
-    //  return  doCatalogOperation(() -> CatalogHandlers.convertTable(baseCatalog,
-    // tableIdentifier));
-    // }
     authorizeBasicTableLikeOperationOrThrow(op, PolarisEntitySubType.TABLE, tableIdentifier);
 
-    return doCatalogOperation(() -> CatalogHandlers.loadTable(baseCatalog, tableIdentifier));
+    PolarisBaseEntity tableEntity = ((BasePolarisCatalog)baseCatalog).getTableEntity(tableIdentifier);
+    if (tableEntity.getType() == PolarisEntityType.FOREIGN_TABLE) {
+      // TODO: If it's ForeignTable, call loadForeignTable
+      authorizeForeignTableOperationOrThrow(op, tableIdentifier);
+      return doCatalogOperation(() -> loadForeignTable(baseCatalog, tableIdentifier));
+    } else {
+      return doCatalogOperation(() -> CatalogHandlers.loadTable(baseCatalog, tableIdentifier));
+    }
+  }
+
+  private LoadTableResponse loadForeignTable(Catalog baseCatalog, TableIdentifier tableIdentifier) {
+    ForeignTableEntity entity = null;
+    Table table = ForeignTableConverter.of(baseCatalog, tableIdentifier).convert(entity);
+    return LoadTableResponse.builder().withTableMetadata(((BaseTable)table).operations().current()).build();
   }
 
   public LoadTableResponse loadTableWithAccessDelegation(
