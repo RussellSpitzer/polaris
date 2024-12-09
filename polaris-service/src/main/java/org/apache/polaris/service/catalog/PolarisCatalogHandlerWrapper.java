@@ -78,6 +78,9 @@ import org.apache.polaris.core.auth.PolarisAuthorizer;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
+import org.apache.polaris.core.entity.ForeignTableEntity;
+import org.apache.polaris.core.entity.PolarisBaseEntity;
+import org.apache.polaris.core.entity.PolarisEntity;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.persistence.PolarisEntityManager;
@@ -88,6 +91,7 @@ import org.apache.polaris.core.persistence.resolver.PolarisResolutionManifest;
 import org.apache.polaris.core.persistence.resolver.ResolverPath;
 import org.apache.polaris.core.persistence.resolver.ResolverStatus;
 import org.apache.polaris.core.storage.PolarisStorageActions;
+import org.apache.polaris.core.tables.ForeignTableConverter;
 import org.apache.polaris.service.context.CallContextCatalogFactory;
 import org.apache.polaris.service.types.NotificationRequest;
 import org.slf4j.Logger;
@@ -310,7 +314,7 @@ public class PolarisCatalogHandlerWrapper {
     PolarisResolvedPathWrapper target =
         resolutionManifest.getResolvedPath(identifier, subType, true);
     if (target == null) {
-      if (subType == PolarisEntitySubType.TABLE) {
+      if (subType == PolarisEntitySubType.TABLE || subType == PolarisEntitySubType.FOREIGN_TABLE) {
         throw new NoSuchTableException("Table does not exist: %s", identifier);
       } else {
         throw new NoSuchViewException("View does not exist: %s", identifier);
@@ -796,16 +800,19 @@ public class PolarisCatalogHandlerWrapper {
   public LoadTableResponse loadTable(TableIdentifier tableIdentifier, String snapshots) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LOAD_TABLE;
 
-    // TODO: if it's ForeignTable, call convertTable
-    // if (foreignTable) {
-    //   authorizeBasicForeignOperationOrThrow(op, PolarisEntitySubType.FOREIGN_TABLE,
-    // tableIdentifier);
-    //  return  doCatalogOperation(() -> CatalogHandlers.convertTable(baseCatalog,
-    // tableIdentifier));
-    // }
-    authorizeBasicTableLikeOperationOrThrow(op, PolarisEntitySubType.TABLE, tableIdentifier);
+    try {
+      authorizeBasicTableLikeOperationOrThrow(op, PolarisEntitySubType.TABLE, tableIdentifier);
+    } catch (NoSuchTableException | NoSuchViewException e) {
+      // fall back to FOREIGN_TABLE if table cannot be found
+      authorizeBasicTableLikeOperationOrThrow(op, PolarisEntitySubType.FOREIGN_TABLE, tableIdentifier);
+    }
 
-    return doCatalogOperation(() -> CatalogHandlers.loadTable(baseCatalog, tableIdentifier));
+    PolarisBaseEntity tableEntity = ((BasePolarisCatalog)baseCatalog).getTableEntity(tableIdentifier);
+    if (tableEntity.getSubType() == PolarisEntitySubType.FOREIGN_TABLE) {
+      return doCatalogOperation(() -> ForeignTableConverter.loadTable((ForeignTableEntity)tableEntity));
+    } else {
+      return doCatalogOperation(() -> CatalogHandlers.loadTable(baseCatalog, tableIdentifier));
+    }
   }
 
   public LoadTableResponse loadTableWithAccessDelegation(

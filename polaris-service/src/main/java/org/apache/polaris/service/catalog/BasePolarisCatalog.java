@@ -80,6 +80,7 @@ import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
 import org.apache.polaris.core.context.CallContext;
 import org.apache.polaris.core.entity.CatalogEntity;
 import org.apache.polaris.core.entity.NamespaceEntity;
+import org.apache.polaris.core.entity.PolarisBaseEntity;
 import org.apache.polaris.core.entity.PolarisEntity;
 import org.apache.polaris.core.entity.PolarisEntityConstants;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
@@ -1165,6 +1166,10 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
                     targetLocation, siblingLocation);
               }
             });
+  }
+
+  public PolarisBaseEntity getTableEntity(TableIdentifier tableIdentifier) {
+    return resolvedEntityView.getPassthroughResolvedPath(tableIdentifier).getRawLeafEntity();
   }
 
   private class BasePolarisCatalogTableBuilder
