@@ -25,9 +25,9 @@ import org.apache.iceberg.rest.RESTUtil;
 public class ForeignTableEntity extends TableLikeEntity {
 
   /**
-   * A string which describes the underlying format/source. For example "delta", "hudi", "cassandra". Polaris will
-   * not validate or use this except when deciding whether a table should be passed through the
-   * TableConversionService.
+   * A string which describes the underlying format/source. For example "delta", "hudi",
+   * "cassandra". Polaris will not validate or use this except when deciding whether a table should
+   * be passed through the TableConversionService.
    */
   public static final String FOREIGN_SOURCE_KEY = "_source";
 
@@ -57,14 +57,14 @@ public class ForeignTableEntity extends TableLikeEntity {
       return new ForeignTableEntity(buildBase());
     }
 
-    public ForeignTableEntity.Builder setTableIdentifier(TableIdentifier identifier) {
+    public Builder setTableIdentifier(TableIdentifier identifier) {
       Namespace namespace = identifier.namespace();
       setParentNamespace(namespace);
       setName(identifier.name());
       return this;
     }
 
-    public ForeignTableEntity.Builder setParentNamespace(Namespace namespace) {
+    public Builder setParentNamespace(Namespace namespace) {
       if (namespace != null && !namespace.isEmpty()) {
         internalProperties.put(
             NamespaceEntity.PARENT_NAMESPACE_KEY, RESTUtil.encodeNamespace(namespace));
@@ -72,22 +72,22 @@ public class ForeignTableEntity extends TableLikeEntity {
       return this;
     }
 
-    public ForeignTableEntity.Builder setBaseLocation(String location) {
+    public Builder setBaseLocation(String location) {
       properties.put(PolarisEntityConstants.ENTITY_BASE_LOCATION, location);
       return this;
     }
 
-    public ForeignTableEntity.Builder setSource(String source) {
+    public Builder setSource(String source) {
       properties.put(FOREIGN_SOURCE_KEY, source);
       return this;
     }
 
-    public ForeignTableEntity.Builder setMetadataLocation(String location) {
+    public Builder setMetadataLocation(String location) {
       internalProperties.put(METADATA_LOCATION_KEY, location);
       return this;
     }
 
-    public ForeignTableEntity.Builder setLastNotificationTimestamp(long timestamp) {
+    public Builder setLastNotificationTimestamp(long timestamp) {
       internalProperties.put(LAST_ADMITTED_NOTIFICATION_TIMESTAMP_KEY, String.valueOf(timestamp));
       return this;
     }

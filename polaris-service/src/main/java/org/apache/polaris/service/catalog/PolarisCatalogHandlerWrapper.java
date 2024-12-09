@@ -794,6 +794,14 @@ public class PolarisCatalogHandlerWrapper {
 
   public LoadTableResponse loadTable(TableIdentifier tableIdentifier, String snapshots) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LOAD_TABLE;
+
+    // TODO: if it's ForeignTable, call convertTable
+    // if (foreignTable) {
+    //   authorizeBasicForeignOperationOrThrow(op, PolarisEntitySubType.FOREIGN_TABLE,
+    // tableIdentifier);
+    //  return  doCatalogOperation(() -> CatalogHandlers.convertTable(baseCatalog,
+    // tableIdentifier));
+    // }
     authorizeBasicTableLikeOperationOrThrow(op, PolarisEntitySubType.TABLE, tableIdentifier);
 
     return doCatalogOperation(() -> CatalogHandlers.loadTable(baseCatalog, tableIdentifier));

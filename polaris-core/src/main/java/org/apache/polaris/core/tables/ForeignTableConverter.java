@@ -16,13 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.polaris.core.tables;
 
+import org.apache.iceberg.Table;
 import org.apache.polaris.core.entity.ForeignTableEntity;
-import org.apache.polaris.core.entity.TableLikeEntity;
 
 public interface ForeignTableConverter {
 
-  TableLikeEntity convert(ForeignTableEntity entity) throws ConversionFailureException;
+  Table convert(ForeignTableEntity entity) throws ConversionFailureException;
 }

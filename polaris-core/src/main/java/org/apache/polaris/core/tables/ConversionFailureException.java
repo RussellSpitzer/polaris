@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.polaris.core.tables;
 
-public class ConversionFailureException extends Exception{}
+public class ConversionFailureException extends RuntimeException {}

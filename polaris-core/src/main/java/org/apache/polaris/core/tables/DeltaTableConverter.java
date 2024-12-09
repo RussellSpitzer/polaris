@@ -16,20 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.polaris.core.tables;
 
+import org.apache.iceberg.Table;
 import org.apache.polaris.core.entity.ForeignTableEntity;
-import org.apache.polaris.core.entity.TableLikeEntity;
 
-/**
- * Use XTable library to convert Delta table to Iceberg table
- */
+/** Use XTable library to convert Delta table to Iceberg table */
 public class DeltaTableConverter implements ForeignTableConverter {
 
-
   @Override
-  public TableLikeEntity convert(ForeignTableEntity entity) throws ConversionFailureException {
+  public Table convert(ForeignTableEntity entity) throws ConversionFailureException {
     return null;
   }
 }
