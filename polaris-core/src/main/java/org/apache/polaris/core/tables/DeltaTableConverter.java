@@ -38,6 +38,7 @@ public class DeltaTableConverter implements ForeignTableConverter {
 
   @Override
   public Table convert(ForeignTableEntity entity) throws ConversionFailureException {
+    // TODO: checking whether the entity is already converted
     if (TableFormat.DELTA.equals(entity.getSource())) {
       throw new ConversionFailureException("Invalid source format: " + entity.getSource());
     }
@@ -94,7 +95,7 @@ public class DeltaTableConverter implements ForeignTableConverter {
 
   private static Configuration loadHadoopConf() {
     Configuration conf = new Configuration();
-    conf.set("spark.master", "local[*]");
+    conf.set("spark.master", "local[2]");
     return conf;
   }
 }

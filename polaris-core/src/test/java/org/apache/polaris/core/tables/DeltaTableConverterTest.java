@@ -36,6 +36,9 @@ public class DeltaTableConverterTest {
 
   @Test
   void testRunSync() {
+    // This test is currently hardcoded and requires manually creating the Delta table using Spark
+    // in the base location. Since this is for Snowvation, will automate these tests when bandwidth
+    // allows.
     TableIdentifier identifier = TableIdentifier.of(Namespace.of("db1", "schema1"), "people");
     final String baseLocation = "file:///tmp/delta-dataset/people/";
     final String metadataLocation = baseLocation + "metadata/v1.metadata.json";
