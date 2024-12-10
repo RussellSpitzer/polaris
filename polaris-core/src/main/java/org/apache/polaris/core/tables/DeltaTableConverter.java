@@ -20,10 +20,8 @@ package org.apache.polaris.core.tables;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.BaseTable;
-import org.apache.iceberg.StaticTableOperations;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.hadoop.HadoopFileIO;
+import org.apache.iceberg.hadoop.HadoopTables;
 import org.apache.polaris.core.entity.ForeignTableEntity;
 import org.apache.xtable.conversion.ConversionConfig;
 import org.apache.xtable.conversion.ConversionController;
@@ -34,7 +32,6 @@ import org.apache.xtable.model.storage.TableFormat;
 import org.apache.xtable.model.sync.SyncMode;
 import org.apache.xtable.model.sync.SyncResult;
 
-import java.nio.file.Path;
 import java.util.Collections;
 
 /** Use XTable library to convert Delta table to Iceberg table */
@@ -73,12 +70,9 @@ public class DeltaTableConverter implements ForeignTableConverter {
             SyncResult.builder().status(SyncResult.SyncStatus.SUCCESS).build());
   }
 
-  Table loadTable(ForeignTableEntity entity) {
+  private Table loadTable(ForeignTableEntity entity) {
     String baseLocation = entity.getBaseLocation();
-    String metadataLocation = Path.of(baseLocation, "metadata/v1.metadata.json").toString();
-    StaticTableOperations tableOps =
-        new StaticTableOperations(metadataLocation, new HadoopFileIO(conf));
-    return new BaseTable(tableOps, baseLocation);
+    return new HadoopTables(conf).load(baseLocation);
   }
 
   private ConversionConfig getConversionConfig(ForeignTableEntity entity) {
