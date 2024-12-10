@@ -1273,7 +1273,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
             tableIdentifier, tableIdentifier.namespace());
       }
 
-      boolean isForeignTable = !metadata.property("_source", "").isEmpty();
+      boolean isForeignTable = !metadata.property(ForeignTableEntity.FOREIGN_SOURCE_KEY, "").isEmpty();
       PolarisEntitySubType subType = isForeignTable ? PolarisEntitySubType.FOREIGN_TABLE : PolarisEntitySubType.TABLE;
 
       PolarisResolvedPathWrapper resolvedTableEntities =
@@ -1360,7 +1360,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
         existingLocation = null;
         if (isForeignTable) {
           entity = new ForeignTableEntity.Builder(tableIdentifier, metadata.location())
-              .setSource(metadata.properties().get("_source"))
+              .setSource(metadata.properties().get(ForeignTableEntity.FOREIGN_SOURCE_KEY))
               .setCatalogId(getCatalogId())
               .setSubType(subType)
               .setBaseLocation(metadata.location())
