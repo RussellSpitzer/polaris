@@ -20,7 +20,10 @@ package org.apache.polaris.core.tables;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.BaseTable;
+import org.apache.iceberg.StaticTableOperations;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.hadoop.HadoopFileIO;
 import org.apache.polaris.core.entity.ForeignTableEntity;
 import org.apache.xtable.conversion.ConversionConfig;
 import org.apache.xtable.conversion.ConversionController;
@@ -31,15 +34,21 @@ import org.apache.xtable.model.storage.TableFormat;
 import org.apache.xtable.model.sync.SyncMode;
 import org.apache.xtable.model.sync.SyncResult;
 
+import java.nio.file.Path;
 import java.util.Collections;
 
 /** Use XTable library to convert Delta table to Iceberg table */
 public class DeltaTableConverter implements ForeignTableConverter {
+  private final Configuration conf;
+
+  public DeltaTableConverter() {
+    conf = loadHadoopConf();
+  }
 
   @Override
   public Table convert(ForeignTableEntity entity) throws ConversionFailureException {
     // TODO: checking whether the entity is already converted
-    if (TableFormat.DELTA.equals(entity.getSource())) {
+    if (!TableFormat.DELTA.equals(entity.getSource())) {
       throw new ConversionFailureException("Invalid source format: " + entity.getSource());
     }
     SyncResult syncResult = runSync(entity);
@@ -53,11 +62,10 @@ public class DeltaTableConverter implements ForeignTableConverter {
   SyncResult runSync(ForeignTableEntity entity) {
     ConversionConfig conversionConfig = getConversionConfig(entity);
 
-    Configuration hadoopConf = loadHadoopConf();
     DeltaConversionSourceProvider conversionSourceProvider = new DeltaConversionSourceProvider();
-    conversionSourceProvider.init(hadoopConf);
+    conversionSourceProvider.init(conf);
 
-    ConversionController conversionController = new ConversionController(hadoopConf);
+    ConversionController conversionController = new ConversionController(conf);
     return conversionController
         .sync(conversionConfig, conversionSourceProvider)
         .getOrDefault(
@@ -66,8 +74,11 @@ public class DeltaTableConverter implements ForeignTableConverter {
   }
 
   Table loadTable(ForeignTableEntity entity) {
-    // TODO: Get the Iceberg Table from ForeignTableEntity
-    return null;
+    String baseLocation = entity.getBaseLocation();
+    String metadataLocation = Path.of(baseLocation, "metadata/v1.metadata.json").toString();
+    StaticTableOperations tableOps =
+        new StaticTableOperations(metadataLocation, new HadoopFileIO(conf));
+    return new BaseTable(tableOps, baseLocation);
   }
 
   private ConversionConfig getConversionConfig(ForeignTableEntity entity) {
