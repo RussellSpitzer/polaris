@@ -18,4 +18,8 @@
  */
 package org.apache.polaris.core.tables;
 
-public class ConversionFailureException extends RuntimeException {}
+public class ConversionFailureException extends RuntimeException {
+  public ConversionFailureException(String message) {
+    super(message);
+  }
+}

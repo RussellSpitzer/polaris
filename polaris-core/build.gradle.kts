@@ -34,6 +34,19 @@ dependencies {
     implementation("io.airlift:aircompressor:0.27") { because("Vulnerability detected in 0.25") }
   }
 
+  implementation("org.apache.xtable:xtable-core_2.12:0.2.0-incubating") {
+    // Exclude Spark and Delta dependencies from the library
+    exclude("org.apache.spark", "spark-sql_2.12")
+    exclude("io.delta", "delta-core_2.12")
+  }
+  implementation("org.apache.spark:spark-sql_2.12:3.5.1") {
+    // exclude log4j dependencies
+    exclude("org.apache.logging.log4j", "log4j-slf4j2-impl")
+    exclude("org.apache.logging.log4j", "log4j-api")
+    exclude("org.apache.logging.log4j", "log4j-1.2-api")
+  }
+  implementation("io.delta:delta-spark_2.12:3.2.1")
+
   implementation(platform(libs.jackson.bom))
   implementation("com.fasterxml.jackson.core:jackson-annotations")
   implementation("com.fasterxml.jackson.core:jackson-core")
@@ -140,6 +153,16 @@ val generatePolarisService by
 
 listOf("sourcesJar", "compileJava").forEach { task ->
   tasks.named(task) { dependsOn(generatePolarisService) }
+}
+
+tasks.named<Test>("test").configure {
+  jvmArgs("--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED")
+  jvmArgs("--add-opens", "java.base/java.nio=ALL-UNNAMED")
+  jvmArgs("--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED")
+  jvmArgs("--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED")
+  jvmArgs("--add-opens", "java.base/java.util=ALL-UNNAMED")
+  useJUnitPlatform()
+  maxParallelForks = 4
 }
 
 sourceSets {

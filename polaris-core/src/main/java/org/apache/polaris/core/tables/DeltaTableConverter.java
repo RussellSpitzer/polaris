@@ -18,14 +18,83 @@
  */
 package org.apache.polaris.core.tables;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Table;
 import org.apache.polaris.core.entity.ForeignTableEntity;
+import org.apache.xtable.conversion.ConversionConfig;
+import org.apache.xtable.conversion.ConversionController;
+import org.apache.xtable.conversion.SourceTable;
+import org.apache.xtable.conversion.TargetTable;
+import org.apache.xtable.delta.DeltaConversionSourceProvider;
+import org.apache.xtable.model.storage.TableFormat;
+import org.apache.xtable.model.sync.SyncMode;
+import org.apache.xtable.model.sync.SyncResult;
+
+import java.util.Collections;
 
 /** Use XTable library to convert Delta table to Iceberg table */
 public class DeltaTableConverter implements ForeignTableConverter {
 
   @Override
   public Table convert(ForeignTableEntity entity) throws ConversionFailureException {
+    if (TableFormat.DELTA.equals(entity.getSource())) {
+      throw new ConversionFailureException("Invalid source format: " + entity.getSource());
+    }
+    SyncResult syncResult = runSync(entity);
+    if (syncResult.getStatus() != SyncResult.SyncStatus.SUCCESS) {
+      throw new ConversionFailureException(syncResult.getStatus().getErrorMessage());
+    }
+    return loadTable(entity);
+  }
+
+  @VisibleForTesting
+  SyncResult runSync(ForeignTableEntity entity) {
+    ConversionConfig conversionConfig = getConversionConfig(entity);
+
+    Configuration hadoopConf = loadHadoopConf();
+    DeltaConversionSourceProvider conversionSourceProvider = new DeltaConversionSourceProvider();
+    conversionSourceProvider.init(hadoopConf);
+
+    ConversionController conversionController = new ConversionController(hadoopConf);
+    return conversionController
+        .sync(conversionConfig, conversionSourceProvider)
+        .getOrDefault(
+            TableFormat.ICEBERG,
+            SyncResult.builder().status(SyncResult.SyncStatus.SUCCESS).build());
+  }
+
+  Table loadTable(ForeignTableEntity entity) {
+    // TODO: Get the Iceberg Table from ForeignTableEntity
     return null;
+  }
+
+  private ConversionConfig getConversionConfig(ForeignTableEntity entity) {
+    String sourceFormat = entity.getSource();
+    String tableBasePath = entity.getBaseLocation();
+    String tableName = entity.getName();
+    SourceTable sourceTable =
+        SourceTable.builder()
+            .name(tableName)
+            .basePath(tableBasePath)
+            .formatName(sourceFormat)
+            .build();
+    TargetTable targetTable =
+        TargetTable.builder()
+            .name(tableName)
+            .basePath(tableBasePath)
+            .formatName(TableFormat.ICEBERG)
+            .build();
+    return ConversionConfig.builder()
+        .sourceTable(sourceTable)
+        .targetTables(Collections.singletonList(targetTable))
+        .syncMode(SyncMode.INCREMENTAL)
+        .build();
+  }
+
+  private static Configuration loadHadoopConf() {
+    Configuration conf = new Configuration();
+    conf.set("spark.master", "local[*]");
+    return conf;
   }
 }
