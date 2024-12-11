@@ -39,7 +39,14 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.iceberg.*;
+import org.apache.iceberg.BaseMetastoreTableOperations;
+import org.apache.iceberg.BaseTable;
+import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.TableMetadata;
+import org.apache.iceberg.TableMetadataParser;
+import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -71,7 +78,14 @@ import org.apache.polaris.core.admin.model.StorageConfigInfo;
 import org.apache.polaris.core.auth.AuthenticatedPolarisPrincipal;
 import org.apache.polaris.core.catalog.PolarisCatalogHelpers;
 import org.apache.polaris.core.context.CallContext;
-import org.apache.polaris.core.entity.*;
+import org.apache.polaris.core.entity.CatalogEntity;
+import org.apache.polaris.core.entity.NamespaceEntity;
+import org.apache.polaris.core.entity.PolarisEntity;
+import org.apache.polaris.core.entity.PolarisEntityConstants;
+import org.apache.polaris.core.entity.PolarisEntitySubType;
+import org.apache.polaris.core.entity.PolarisEntityType;
+import org.apache.polaris.core.entity.PolarisTaskConstants;
+import org.apache.polaris.core.entity.TableLikeEntity;
 import org.apache.polaris.core.persistence.BaseResult;
 import org.apache.polaris.core.persistence.PolarisEntityManager;
 import org.apache.polaris.core.persistence.PolarisMetaStoreManager;
@@ -1349,12 +1363,13 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       if (null == entity) {
         existingLocation = null;
         if (isForeignTable) {
+          // create a foreign table entity
           entity = new ForeignTableEntity.Builder(tableIdentifier, newLocation)
               .setSource(metadata.properties().get(ForeignTableEntity.FOREIGN_SOURCE_KEY))
               .setCatalogId(getCatalogId())
-              .setProperties(metadata.properties())
+              .setProperties(metadata.properties())   // table properties
               .setSubType(subType)
-              .setBaseLocation(metadata.location())
+              .setBaseLocation(metadata.location())   // this is the delta table location
               .setId(
                   getMetaStoreManager().generateNewEntityId(getCurrentPolarisContext()).getId())
               .build();
