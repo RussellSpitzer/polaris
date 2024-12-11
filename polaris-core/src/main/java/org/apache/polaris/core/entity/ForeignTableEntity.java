@@ -43,7 +43,7 @@ public class ForeignTableEntity extends TableLikeEntity {
       extends PolarisEntity.BaseBuilder<ForeignTableEntity, ForeignTableEntity.Builder> {
     public Builder(TableIdentifier identifier, String metadataLocation) {
       super();
-      setType(PolarisEntityType.FOREIGN_TABLE);
+      setType(PolarisEntityType.TABLE_LIKE);
       setTableIdentifier(identifier);
       setMetadataLocation(metadataLocation);
     }

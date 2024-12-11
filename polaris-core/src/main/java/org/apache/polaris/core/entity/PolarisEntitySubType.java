@@ -32,7 +32,7 @@ public enum PolarisEntitySubType {
   NULL_SUBTYPE(0, null),
   TABLE(2, PolarisEntityType.TABLE_LIKE),
   VIEW(3, PolarisEntityType.TABLE_LIKE),
-  FOREIGN_TABLE(4, PolarisEntityType.FOREIGN_TABLE);
+  FOREIGN_TABLE(4, PolarisEntityType.TABLE_LIKE);
 
   // to efficiently map the code of a subtype to its corresponding subtype enum, use a reverse
   // array which is initialized below
