@@ -39,14 +39,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.iceberg.BaseMetastoreTableOperations;
-import org.apache.iceberg.BaseTable;
-import org.apache.iceberg.CatalogProperties;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.Table;
-import org.apache.iceberg.TableMetadata;
-import org.apache.iceberg.TableMetadataParser;
-import org.apache.iceberg.TableOperations;
+import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -1202,9 +1195,6 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
     @Override
     public void doRefresh() {
       LOGGER.debug("doRefresh for tableIdentifier {}", tableIdentifier);
-      // boolean isForeignTable = (this.current() != null) && (!this.current().property("_source", "").isEmpty());
-      // boolean isForeignTable = false;
-      // PolarisEntitySubType subType = isForeignTable ? PolarisEntitySubType.FOREIGN_TABLE: PolarisEntitySubType.TABLE;
       // While doing refresh/commit protocols, we must fetch the fresh "passthrough" resolved
       // table entity instead of the statically-resolved authz resolution set.
       boolean isForeignTable = false;
@@ -1335,7 +1325,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
         }
       }
 
-      String newLocation = isForeignTable? null : writeNewMetadataIfRequired(base == null, metadata);
+      String newLocation = writeNewMetadataIfRequired(base == null, metadata);
       String oldLocation = base == null ? null : base.metadataFileLocation();
 
       PolarisResolvedPathWrapper resolvedView =
@@ -1359,9 +1349,10 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       if (null == entity) {
         existingLocation = null;
         if (isForeignTable) {
-          entity = new ForeignTableEntity.Builder(tableIdentifier, metadata.location())
+          entity = new ForeignTableEntity.Builder(tableIdentifier, newLocation)
               .setSource(metadata.properties().get(ForeignTableEntity.FOREIGN_SOURCE_KEY))
               .setCatalogId(getCatalogId())
+              .setProperties(metadata.properties())
               .setSubType(subType)
               .setBaseLocation(metadata.location())
               .setId(

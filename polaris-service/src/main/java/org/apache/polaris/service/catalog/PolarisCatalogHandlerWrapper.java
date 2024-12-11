@@ -258,7 +258,7 @@ public class PolarisCatalogHandlerWrapper {
   }
 
   private void authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-      PolarisAuthorizableOperation op, TableIdentifier identifier) {
+      PolarisAuthorizableOperation op, TableIdentifier identifier, boolean isForeignTable) {
     Namespace namespace = identifier.namespace();
 
     resolutionManifest =
@@ -273,10 +273,11 @@ public class PolarisCatalogHandlerWrapper {
     // indicate that the underlying catalog is "allowed" to check the creation path for a
     // conflicting
     // entity.
+    PolarisEntityType type = isForeignTable ? PolarisEntityType.FOREIGN_TABLE : PolarisEntityType.TABLE_LIKE;
     resolutionManifest.addPassthroughPath(
         new ResolverPath(
             PolarisCatalogHelpers.tableIdentifierToList(identifier),
-            PolarisEntityType.TABLE_LIKE,
+            type,
             true /* optional */),
         identifier);
     resolutionManifest.resolveAll();
@@ -562,8 +563,9 @@ public class PolarisCatalogHandlerWrapper {
 
   public LoadTableResponse createTableDirect(Namespace namespace, CreateTableRequest request) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.CREATE_TABLE_DIRECT;
+    boolean isForeignTable = !request.properties().getOrDefault("_source", "").isEmpty();
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-        op, TableIdentifier.of(namespace, request.name()));
+        op, TableIdentifier.of(namespace, request.name()), isForeignTable);
 
     CatalogEntity catalog =
         CatalogEntity.of(
@@ -582,7 +584,7 @@ public class PolarisCatalogHandlerWrapper {
     PolarisAuthorizableOperation op =
         PolarisAuthorizableOperation.CREATE_TABLE_DIRECT_WITH_WRITE_DELEGATION;
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-        op, TableIdentifier.of(namespace, request.name()));
+        op, TableIdentifier.of(namespace, request.name()), false);
 
     CatalogEntity catalog =
         CatalogEntity.of(
@@ -691,7 +693,7 @@ public class PolarisCatalogHandlerWrapper {
   public LoadTableResponse createTableStaged(Namespace namespace, CreateTableRequest request) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.CREATE_TABLE_STAGED;
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-        op, TableIdentifier.of(namespace, request.name()));
+        op, TableIdentifier.of(namespace, request.name()), false);
 
     CatalogEntity catalog =
         CatalogEntity.of(
@@ -714,7 +716,7 @@ public class PolarisCatalogHandlerWrapper {
     PolarisAuthorizableOperation op =
         PolarisAuthorizableOperation.CREATE_TABLE_STAGED_WITH_WRITE_DELEGATION;
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-        op, TableIdentifier.of(namespace, request.name()));
+        op, TableIdentifier.of(namespace, request.name()), false);
 
     CatalogEntity catalog =
         CatalogEntity.of(
@@ -750,7 +752,7 @@ public class PolarisCatalogHandlerWrapper {
   public LoadTableResponse registerTable(Namespace namespace, RegisterTableRequest request) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.REGISTER_TABLE;
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-        op, TableIdentifier.of(namespace, request.name()));
+        op, TableIdentifier.of(namespace, request.name()), false);
 
     return doCatalogOperation(() -> CatalogHandlers.registerTable(baseCatalog, namespace, request));
   }
@@ -920,7 +922,7 @@ public class PolarisCatalogHandlerWrapper {
   public LoadTableResponse updateTableForStagedCreate(
       TableIdentifier tableIdentifier, UpdateTableRequest request) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.UPDATE_TABLE_FOR_STAGED_CREATE;
-    authorizeCreateTableLikeUnderNamespaceOperationOrThrow(op, tableIdentifier);
+    authorizeCreateTableLikeUnderNamespaceOperationOrThrow(op, tableIdentifier, false);
 
     CatalogEntity catalog =
         CatalogEntity.of(
@@ -1101,7 +1103,7 @@ public class PolarisCatalogHandlerWrapper {
   public LoadViewResponse createView(Namespace namespace, CreateViewRequest request) {
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.CREATE_VIEW;
     authorizeCreateTableLikeUnderNamespaceOperationOrThrow(
-        op, TableIdentifier.of(namespace, request.name()));
+        op, TableIdentifier.of(namespace, request.name()), false);
 
     CatalogEntity catalog =
         CatalogEntity.of(

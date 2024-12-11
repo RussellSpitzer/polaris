@@ -557,7 +557,7 @@ public class PolarisRestCatalogIntegrationTest extends CatalogTests<RESTCatalog>
     restCatalog
         .buildTable(tableIdentifier, SCHEMA)
         .withLocation(catalogBaseLocation + "/checkpoint_dir/delta/t1")
-        // .withProperty("_source", "delta")
+        .withProperty("_source", "delta")
         .create();
   }
 
