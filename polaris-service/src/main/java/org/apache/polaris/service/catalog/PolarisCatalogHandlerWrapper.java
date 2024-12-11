@@ -314,9 +314,9 @@ public class PolarisCatalogHandlerWrapper {
         resolutionManifest.getResolvedPath(identifier, subType, true);
     if (target == null) {
       if (subType == PolarisEntitySubType.TABLE || subType == PolarisEntitySubType.FOREIGN_TABLE) {
-        throw new NoSuchTableException("Table does not exist: %s", identifier);
+        throw new NoSuchTableException("Basic Table does not exist: %s", identifier);
       } else {
-        throw new NoSuchViewException("View does not exist: %s", identifier);
+        throw new NoSuchViewException("Basic View does not exist: %s", identifier);
       }
     }
     authorizer.authorizeOrThrow(
@@ -352,9 +352,9 @@ public class PolarisCatalogHandlerWrapper {
           PolarisCatalogHelpers.listToTableIdentifier(
               status.getFailedToResolvePath().getEntityNames());
       if (subType == PolarisEntitySubType.TABLE) {
-        throw new NoSuchTableException("Table does not exist: %s", identifier);
+        throw new NoSuchTableException("Basic Table does not exist: %s", identifier);
       } else {
-        throw new NoSuchViewException("View does not exist: %s", identifier);
+        throw new NoSuchViewException("Basic View does not exist: %s", identifier);
       }
     }
 
@@ -368,9 +368,9 @@ public class PolarisCatalogHandlerWrapper {
                             () ->
                                 subType == PolarisEntitySubType.TABLE
                                     ? new NoSuchTableException(
-                                        "Table does not exist: %s", identifier)
+                                        "Basic Table does not exist: %s", identifier)
                                     : new NoSuchViewException(
-                                        "View does not exist: %s", identifier)))
+                                        "Basic View does not exist: %s", identifier)))
             .toList();
     authorizer.authorizeOrThrow(
         authenticatedPrincipal,
@@ -409,7 +409,7 @@ public class PolarisCatalogHandlerWrapper {
       throw new NoSuchNamespaceException("Namespace does not exist: %s", dst.namespace());
     } else if (resolutionManifest.getResolvedPath(src, subType) == null) {
       if (subType == PolarisEntitySubType.TABLE) {
-        throw new NoSuchTableException("Table does not exist: %s", src);
+        throw new NoSuchTableException("Basic Table does not exist: %s", src);
       } else {
         throw new NoSuchViewException("View does not exist: %s", src);
       }
@@ -647,7 +647,7 @@ public class PolarisCatalogHandlerWrapper {
             return responseBuilder.build();
           } else if (table instanceof BaseMetadataTable) {
             // metadata tables are loaded on the client side, return NoSuchTableException for now
-            throw new NoSuchTableException("Table does not exist: %s", tableIdentifier.toString());
+            throw new NoSuchTableException("Basic Table does not exist: %s", tableIdentifier.toString());
           }
 
           throw new IllegalStateException("Cannot wrap catalog that does not produce BaseTable");
@@ -804,6 +804,8 @@ public class PolarisCatalogHandlerWrapper {
   }
 
   public LoadTableResponse loadTable(TableIdentifier tableIdentifier, String snapshots) {
+    LOGGER.info("Demo: calling loadTable");
+
     PolarisAuthorizableOperation op = PolarisAuthorizableOperation.LOAD_TABLE;
 
     authorizeBasicTableOperationOrThrow(op, tableIdentifier);
@@ -820,6 +822,8 @@ public class PolarisCatalogHandlerWrapper {
 
   public LoadTableResponse loadTableWithAccessDelegation(
       TableIdentifier tableIdentifier, String snapshots) {
+    LOGGER.info("Demo: calling loadTableWithAccessDelegation");
+
     // Here we have a single method that falls through multiple candidate
     // PolarisAuthorizableOperations because instead of identifying the desired operation up-front
     // and
@@ -835,10 +839,12 @@ public class PolarisCatalogHandlerWrapper {
     try {
       // TODO: Refactor to have a boolean-return version of the helpers so we can fallthrough
       // easily.
-      authorizeBasicTableLikeOperationOrThrow(write, PolarisEntitySubType.TABLE, tableIdentifier);
+      authorizeBasicTableOperationOrThrow(write, tableIdentifier);
+      // authorizeBasicTableLikeOperationOrThrow(write, PolarisEntitySubType.TABLE, tableIdentifier);
       actionsRequested.add(PolarisStorageActions.WRITE);
     } catch (ForbiddenException e) {
-      authorizeBasicTableLikeOperationOrThrow(read, PolarisEntitySubType.TABLE, tableIdentifier);
+      authorizeBasicTableOperationOrThrow(read, tableIdentifier);
+      //authorizeBasicTableLikeOperationOrThrow(read, PolarisEntitySubType.TABLE, tableIdentifier);
     }
 
     PolarisResolvedPathWrapper catalogPath = resolutionManifest.getResolvedReferenceCatalogEntity();
@@ -885,7 +891,7 @@ public class PolarisCatalogHandlerWrapper {
             return responseBuilder.build();
           } else if (table instanceof BaseMetadataTable) {
             // metadata tables are loaded on the client side, return NoSuchTableException for now
-            throw new NoSuchTableException("Table does not exist: %s", tableIdentifier.toString());
+            throw new NoSuchTableException("Demo: Table does not exist: %s", tableIdentifier.toString());
           }
 
           throw new IllegalStateException("Cannot wrap catalog that does not produce BaseTable");
