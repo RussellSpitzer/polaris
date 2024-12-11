@@ -527,8 +527,6 @@ public class PolarisRestCatalogIntegrationTest extends CatalogTests<RESTCatalog>
       assertThat(response).returns(Response.Status.OK.getStatusCode(), Response::getStatus);
       Catalog catalog = response.readEntity(Catalog.class);
       Map<String, String> catalogProps = new HashMap<>(catalog.getProperties().toMap());
-      catalogProps.put(
-          PolarisConfiguration.ALLOW_UNSTRUCTURED_TABLE_LOCATION.catalogConfig(), "false");
       try (Response updateResponse =
                EXT.client()
                    .target(
