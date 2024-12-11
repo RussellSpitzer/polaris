@@ -86,6 +86,7 @@ import org.apache.polaris.core.entity.PolarisEntitySubType;
 import org.apache.polaris.core.entity.PolarisEntityType;
 import org.apache.polaris.core.entity.PolarisTaskConstants;
 import org.apache.polaris.core.entity.TableLikeEntity;
+import org.apache.polaris.core.entity.ForeignTableEntity;
 import org.apache.polaris.core.persistence.BaseResult;
 import org.apache.polaris.core.persistence.PolarisEntityManager;
 import org.apache.polaris.core.persistence.PolarisMetaStoreManager;
@@ -1211,13 +1212,25 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       LOGGER.debug("doRefresh for tableIdentifier {}", tableIdentifier);
       // While doing refresh/commit protocols, we must fetch the fresh "passthrough" resolved
       // table entity instead of the statically-resolved authz resolution set.
-      PolarisResolvedPathWrapper resolvedEntities =
-          resolvedEntityView.getPassthroughResolvedPath(
-              tableIdentifier, PolarisEntitySubType.TABLE);
+      boolean isForeignTable = false;
+      PolarisResolvedPathWrapper tryResolvedEntities =
+          resolvedEntityView.getPassthroughResolvedPath(tableIdentifier, PolarisEntitySubType.TABLE);
+      if (tryResolvedEntities == null) {
+        tryResolvedEntities =
+            resolvedEntityView.getPassthroughResolvedPath(tableIdentifier, PolarisEntitySubType.FOREIGN_TABLE);
+        if (tryResolvedEntities != null) {
+          isForeignTable = true;
+        }
+      }
+      PolarisResolvedPathWrapper resolvedEntities = tryResolvedEntities;
       TableLikeEntity entity = null;
 
       if (resolvedEntities != null) {
-        entity = TableLikeEntity.of(resolvedEntities.getRawLeafEntity());
+        if (isForeignTable) {
+          entity = ForeignTableEntity.of(resolvedEntities.getRawLeafEntity());
+        } else {
+          entity = TableLikeEntity.of(resolvedEntities.getRawLeafEntity());
+        }
         if (!tableIdentifier.equals(entity.getTableIdentifier())) {
           LOGGER
               .atError()
@@ -1265,9 +1278,11 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
             tableIdentifier, tableIdentifier.namespace());
       }
 
+      boolean isForeignTable = !metadata.property(ForeignTableEntity.FOREIGN_SOURCE_KEY, "").isEmpty();
+      PolarisEntitySubType subType = isForeignTable ? PolarisEntitySubType.FOREIGN_TABLE : PolarisEntitySubType.TABLE;
+
       PolarisResolvedPathWrapper resolvedTableEntities =
-          resolvedEntityView.getPassthroughResolvedPath(
-              tableIdentifier, PolarisEntitySubType.TABLE);
+          resolvedEntityView.getPassthroughResolvedPath(tableIdentifier, subType);
 
       // Fetch credentials for the resolved entity. The entity could be the table itself (if it has
       // already been stored and credentials have been configured directly) or it could be the
@@ -1292,11 +1307,11 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
               : resolvedTableEntities.getRawParentPath();
       CatalogEntity catalog = CatalogEntity.of(resolvedNamespace.getFirst());
 
-      if (base == null
+      if (!isForeignTable && (base == null
           || !metadata.location().equals(base.location())
           || !Objects.equal(
               base.properties().get(TableLikeEntity.USER_SPECIFIED_WRITE_DATA_LOCATION_KEY),
-              metadata.properties().get(TableLikeEntity.USER_SPECIFIED_WRITE_DATA_LOCATION_KEY))) {
+              metadata.properties().get(TableLikeEntity.USER_SPECIFIED_WRITE_DATA_LOCATION_KEY)))) {
         // If location is changing then we must validate that the requested location is valid
         // for the storage configuration inherited under this entity's path.
         Set<String> dataLocations = new HashSet<>();
@@ -1342,20 +1357,34 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       // persistence-layer commit).
       PolarisResolvedPathWrapper resolvedEntities =
           resolvedEntityView.getPassthroughResolvedPath(
-              tableIdentifier, PolarisEntitySubType.TABLE);
+              tableIdentifier, subType);
       TableLikeEntity entity =
           TableLikeEntity.of(resolvedEntities == null ? null : resolvedEntities.getRawLeafEntity());
       String existingLocation;
       if (null == entity) {
         existingLocation = null;
-        entity =
-            new TableLikeEntity.Builder(tableIdentifier, newLocation)
-                .setCatalogId(getCatalogId())
-                .setSubType(PolarisEntitySubType.TABLE)
-                .setBaseLocation(metadata.location())
-                .setId(
-                    getMetaStoreManager().generateNewEntityId(getCurrentPolarisContext()).getId())
-                .build();
+        if (isForeignTable) {
+          // create a foreign table entity
+          entity = new ForeignTableEntity.Builder(tableIdentifier, newLocation)
+              .setSource(metadata.properties().get(ForeignTableEntity.FOREIGN_SOURCE_KEY))
+              .setCatalogId(getCatalogId())
+              .setProperties(metadata.properties())   // table properties
+              .setSubType(subType)
+              .setBaseLocation(metadata.location())   // this is the delta table location
+              .setId(
+                  getMetaStoreManager().generateNewEntityId(getCurrentPolarisContext()).getId())
+              .build();
+        } else{
+          entity =
+              new TableLikeEntity.Builder(tableIdentifier, newLocation)
+                  .setCatalogId(getCatalogId())
+                  .setSubType(subType)
+                  .setBaseLocation(metadata.location())
+                  .setId(
+                      getMetaStoreManager().generateNewEntityId(getCurrentPolarisContext()).getId())
+                  .build();
+        }
+
       } else {
         existingLocation = entity.getMetadataLocation();
         entity =
