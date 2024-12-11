@@ -30,6 +30,9 @@ services:
       AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
       AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
 
+    volumes:
+      - /tmp/polaris/ForeignTableDemo/:/tmp/polaris/ForeignTableDemo/
+
     healthcheck:
       test: ["CMD", "curl", "http://localhost:8182/healthcheck"]
       interval: 10s
@@ -50,3 +53,4 @@ services:
       POLARIS_HOST: polaris
     volumes:
       - ./notebooks:/home/jovyan/notebooks
+      - /tmp/polaris/ForeignTableDemo/:/tmp/polaris/ForeignTableDemo/

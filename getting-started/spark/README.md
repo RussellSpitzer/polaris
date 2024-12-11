@@ -39,7 +39,7 @@ Open the Jupyter notebook in a browser.
 Navigate to [`notebooks/SparkPolaris.ipynb`](http://127.0.0.1:8888/lab/tree/notebooks/SparkPolaris.ipynb) <!-- markdown-link-check-disable-line -->
 
 ## Change the Polaris credential
-The Polaris service will create a new root crendential on startup, find this credential in the Polaris service log and change the `polaris_credential` variable in the first cell of the jupyter notebook
+The Polaris service will create a new root credential on startup, find this credential in the Polaris service log and change the `polaris_credential` variable in the first cell of the jupyter notebook
 
 ## Run the Jupyter notebook
 You can now run all cells in the notebook or write your own code!
