@@ -29,8 +29,10 @@ public interface ForeignTableConverter {
   Table convert(ForeignTableEntity entity) throws ConversionFailureException;
 
   static LoadTableResponse loadTable(ForeignTableEntity entity) {
+    ForeignTableEntity sourceStrippedEntity =
+        new ForeignTableEntity.Builder(entity).setSource(null).build();
     if (TableFormat.DELTA.equalsIgnoreCase(entity.getSource())) {
-      Table table = new DeltaTableConverter().convert(entity);
+      Table table = new DeltaTableConverter().convert(sourceStrippedEntity);
       return LoadTableResponse.builder()
           .withTableMetadata(((BaseTable) table).operations().current())
           .build();
