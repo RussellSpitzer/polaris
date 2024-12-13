@@ -100,6 +100,7 @@ public class DeltaTableConverter implements ForeignTableConverter {
   private static Configuration loadHadoopConf() {
     Configuration conf = new Configuration();
     conf.set("spark.master", "local[2]");
+    conf.set("spark.ui.enabled", "false");
     return conf;
   }
 }

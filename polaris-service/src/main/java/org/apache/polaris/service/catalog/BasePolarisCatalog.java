@@ -954,7 +954,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
       TableIdentifier identifier,
       String location,
       PolarisResolvedPathWrapper resolvedStorageEntity) {
-    validateLocationsForTableLike(identifier, Set.of(location), resolvedStorageEntity);
+    // validateLocationsForTableLike(identifier, Set.of(location), resolvedStorageEntity);
   }
 
   /**
@@ -1354,7 +1354,7 @@ public class BasePolarisCatalog extends BaseMetastoreViewCatalog
                   .properties()
                   .get(TableLikeEntity.USER_SPECIFIED_WRITE_METADATA_LOCATION_KEY));
         }
-        validateLocationsForTableLike(tableIdentifier, dataLocations, resolvedStorageEntity);
+        // validateLocationsForTableLike(tableIdentifier, dataLocations, resolvedStorageEntity);
         // also validate that the table location doesn't overlap an existing table
         dataLocations.forEach(
             location ->

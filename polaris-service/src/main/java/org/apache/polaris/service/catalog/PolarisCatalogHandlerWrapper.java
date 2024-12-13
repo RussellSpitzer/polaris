@@ -577,11 +577,15 @@ public class PolarisCatalogHandlerWrapper {
       throw new BadRequestException("Cannot create table on external catalogs.");
     }
 
-    LoadTableResponse response = doCatalogOperation(() -> CatalogHandlers.createTable(baseCatalog, namespace, request));
+    LoadTableResponse response =
+        doCatalogOperation(() -> CatalogHandlers.createTable(baseCatalog, namespace, request));
     TableIdentifier tableIdentifier = TableIdentifier.of(namespace, request.name());
-    PolarisBaseEntity tableEntity = ((BasePolarisCatalog)baseCatalog).getTableEntity(tableIdentifier);
+    PolarisBaseEntity tableEntity =
+        ((BasePolarisCatalog) baseCatalog).getTableEntity(tableIdentifier);
     if (tableEntity.getSubType() == PolarisEntitySubType.FOREIGN_TABLE) {
-      response =  doCatalogOperation(() -> ForeignTableConverter.loadTable(new ForeignTableEntity(tableEntity)));
+      response =
+          doCatalogOperation(
+              () -> ForeignTableConverter.loadTable(new ForeignTableEntity(tableEntity)));
     }
 
     return response;
@@ -835,10 +839,13 @@ public class PolarisCatalogHandlerWrapper {
     try {
       // TODO: Refactor to have a boolean-return version of the helpers so we can fallthrough
       // easily.
-      authorizeBasicTableLikeOperationOrThrow(write, PolarisEntitySubType.TABLE, tableIdentifier);
+      authorizeBasicTableOperationOrThrow(write, tableIdentifier);
+      // authorizeBasicTableLikeOperationOrThrow(write, PolarisEntitySubType.TABLE,
+      // tableIdentifier);
       actionsRequested.add(PolarisStorageActions.WRITE);
     } catch (ForbiddenException e) {
-      authorizeBasicTableLikeOperationOrThrow(read, PolarisEntitySubType.TABLE, tableIdentifier);
+      authorizeBasicTableOperationOrThrow(read, tableIdentifier);
+      // authorizeBasicTableLikeOperationOrThrow(read, PolarisEntitySubType.TABLE, tableIdentifier);
     }
 
     PolarisResolvedPathWrapper catalogPath = resolutionManifest.getResolvedReferenceCatalogEntity();

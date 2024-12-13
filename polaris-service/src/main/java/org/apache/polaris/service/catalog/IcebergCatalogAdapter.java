@@ -278,16 +278,21 @@ public class IcebergCatalogAdapter
         parseAccessDelegationModes(accessDelegationMode);
     Namespace ns = decodeNamespace(namespace);
     TableIdentifier tableIdentifier = TableIdentifier.of(ns, RESTUtil.decodeString(table));
-    if (delegationModes.isEmpty()) {
-      return Response.ok(
-              newHandlerWrapper(securityContext, prefix).loadTable(tableIdentifier, snapshots))
-          .build();
-    } else {
-      return Response.ok(
-              newHandlerWrapper(securityContext, prefix)
-                  .loadTableWithAccessDelegation(tableIdentifier, snapshots))
-          .build();
-    }
+    return Response.ok(
+            newHandlerWrapper(securityContext, prefix).loadTable(tableIdentifier, snapshots))
+        .build();
+
+    //    if (delegationModes.isEmpty()) {
+    //      return Response.ok(
+    //              newHandlerWrapper(securityContext, prefix).loadTable(tableIdentifier,
+    // snapshots))
+    //          .build();
+    //    } else {
+    //      return Response.ok(
+    //              newHandlerWrapper(securityContext, prefix)
+    //                  .loadTableWithAccessDelegation(tableIdentifier, snapshots))
+    //          .build();
+    //    }
   }
 
   @Override

@@ -43,5 +43,6 @@ COPY --from=build /app/polaris-server.yml /app
 EXPOSE 8181
 
 # Run the resulting java binary
+ENV JAVA_OPTS="--add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED"
 ENTRYPOINT ["/app/bin/polaris-service"]
 CMD ["server", "polaris-server.yml"]
