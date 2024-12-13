@@ -47,6 +47,9 @@ dependencies {
   }
   implementation("io.delta:delta-spark_2.12:3.2.1")
 
+  implementation(libs.hadoop.common)
+  implementation(libs.hadoop.aws)
+
   implementation(platform(libs.jackson.bom))
   implementation("com.fasterxml.jackson.core:jackson-annotations")
   implementation("com.fasterxml.jackson.core:jackson-core")
