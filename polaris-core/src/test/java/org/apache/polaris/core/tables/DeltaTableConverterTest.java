@@ -52,6 +52,7 @@ public class DeltaTableConverterTest {
     converter = new DeltaTableConverter();
     String tableName = "people";
     String localBasePath = "file:///tmp/delta-dataset";
+    // TODO: replace local baseLocation with a S3 endpoint
     baseLocation = Path.of(localBasePath, tableName).toString();
   }
 
@@ -63,7 +64,13 @@ public class DeltaTableConverterTest {
             .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
             .config(
                 "spark.sql.catalog.spark_catalog",
-                "org.apache.spark.sql.delta.catalog.DeltaCatalog");
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .config("spark.hadoop.fs.s3.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+            .config(
+                "spark.hadoop.fs.s3.aws.credentials.provider",
+                "org.apache.hadoop.fs.s3.TemporaryAWSCredentialsProvider")
+            .config("spark.hadoop.fs.s3.access.key", "foo")
+            .config("spark.hadoop.fs.s3.secret.key", "bar");
     spark = sessionBuilder.getOrCreate();
 
     var schema =
