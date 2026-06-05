@@ -65,8 +65,6 @@ dependencies {
 
   testFixturesApi(project(":polaris-storage-files-api"))
 
-  testImplementation(project(":polaris-object-storage-mock"))
-
   testFixturesApi("com.fasterxml.jackson.core:jackson-core")
   testFixturesApi("com.fasterxml.jackson.core:jackson-databind")
   testFixturesApi(platform(libs.jackson.bom))
