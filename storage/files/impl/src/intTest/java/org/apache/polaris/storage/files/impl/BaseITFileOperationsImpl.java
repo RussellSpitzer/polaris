@@ -19,16 +19,63 @@
 
 package org.apache.polaris.storage.files.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Map;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.iceberg.io.FileIO;
+import org.apache.polaris.storage.files.api.FileFilter;
+import org.apache.polaris.storage.files.api.FileSpec;
 import org.apache.polaris.storage.files.api.PurgeSpec;
 import org.apache.polaris.storage.files.api.PurgeStats;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Integration tests for {@link FileOperationsImpl} that run against real Iceberg {@code FileIO}
+ * implementations (S3, GCS, ADLS) via testcontainers.
+ *
+ * <p>The bulk of {@code FileOperationsImpl}'s logic — request batching, Iceberg-table file
+ * identification, prefix listing semantics in the abstract — is covered by the unit-tier {@code
+ * TestFileOperationsImpl} against an in-process {@code MockFileIO}. This tier only carries tests
+ * whose assertions genuinely depend on the behaviour of the real cloud SDKs:
+ *
+ * <ul>
+ *   <li>{@link #singleFileRoundTrip()} — smoke test that {@link FileOperationsImpl} correctly
+ *       drives the real {@code FileIO}'s write / prefix-list / bulk-delete contracts end-to-end.
+ *       Exists to catch protocol-level regressions from Iceberg SDK upgrades that an in-process
+ *       mock cannot observe.
+ *   <li>{@link #batchDeleteNonExistentFiles()} — asserts a real-SDK semantic that cannot honestly
+ *       be mocked: {@code S3FileIO}, {@code GCSFileIO}, and {@code ADLSFileIO} all treat
+ *       bulk-delete of a non-existent key as a successful no-op rather than raising {@code
+ *       BulkDeletionFailureException}, and {@link FileOperationsImpl} must remain correct under
+ *       that semantic.
+ * </ul>
+ */
 public abstract class BaseITFileOperationsImpl extends BaseFileOperationsImpl {
+
+  @Test
+  public void singleFileRoundTrip() throws Exception {
+    try (var fileIO = initializedFileIO()) {
+      var prefix = prefix() + "singleFileRoundTrip/";
+      var path = prefix + "hello";
+
+      write(fileIO, path, new byte[] {1, 2, 3});
+
+      var fileOps = new FileOperationsImpl(fileIO);
+
+      try (Stream<FileSpec> listed = fileOps.findFiles(prefix, FileFilter.alwaysTrue())) {
+        soft.assertThat(listed).extracting(FileSpec::location).containsExactly(path);
+      }
+
+      var stats = fileOps.purge(Stream.of(fileSpecFromLocation(path)), PurgeSpec.DEFAULT_INSTANCE);
+      soft.assertThat(stats)
+          .extracting(PurgeStats::purgeFileRequests, PurgeStats::failedFilePurges)
+          .containsExactly(1L, 0L);
+
+      try (Stream<FileSpec> listed = fileOps.findFiles(prefix, FileFilter.alwaysTrue())) {
+        soft.assertThat(listed).isEmpty();
+      }
+    }
+  }
 
   /** Verify that batch-deletions do not fail in case some files do not exist. */
   @Test
@@ -76,51 +123,6 @@ public abstract class BaseITFileOperationsImpl extends BaseFileOperationsImpl {
           // Iceberg does not yield the correct number of purged files, 0/1 in this test (via
           // `BulkDeletionFailureException`) in case those do not exist.
           .containsExactly(1L, 0L);
-    }
-  }
-
-  @Test
-  public void purgeIcebergTable() throws Exception {
-    try (var fileIO = initializedFileIO()) {
-      var prefix = prefix() + "purgeIcebergTable/";
-      var fixtures = new IcebergFixtures(prefix, 3, 3, 3);
-      var tableMetadataPath = fixtures.prefix + "foo.metadata.json";
-
-      write(fileIO, tableMetadataPath, fixtures.tableMetadataBytes);
-      for (var snapshotId = 1; snapshotId <= fixtures.numSnapshots; snapshotId++) {
-        write(
-            fileIO,
-            fixtures.manifestListPath(snapshotId),
-            fixtures.serializedManifestList(snapshotId));
-
-        for (int mf = 0; mf < fixtures.numManifestFiles; mf++) {
-          var manifestFilePath = fixtures.manifestFilePath(snapshotId, mf);
-          write(
-              fileIO,
-              manifestFilePath,
-              fixtures.serializedManifestFile(snapshotId, mf, manifestFilePath));
-        }
-      }
-
-      var fileOps = new FileOperationsImpl(fileIO);
-
-      var purgeStats = fileOps.purgeIcebergTable(tableMetadataPath, PurgeSpec.DEFAULT_INSTANCE);
-
-      assertThat(purgeStats.purgeFileRequests())
-          // 1st "1" --> metadata-json
-          // 2nd "1" --> manifest-list
-          // 3rd "1" --> manifest-file
-          .isEqualTo(
-              1
-                  + fixtures.numSnapshots
-                      * (1 + (long) fixtures.numManifestFiles * (1 + fixtures.numDataFiles)));
-    }
-  }
-
-  @Test
-  public void icebergIntegration() throws Exception {
-    try (var fileIO = initializedFileIO()) {
-      icebergIntegration(fileIO, icebergProperties());
     }
   }
 

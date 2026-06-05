@@ -22,7 +22,6 @@ package org.apache.polaris.storage.files.impl;
 import java.util.Map;
 import org.apache.iceberg.azure.adlsv2.ADLSFileIO;
 import org.apache.iceberg.io.FileIO;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.projectnessie.testing.azurite.Azurite;
 import org.projectnessie.testing.azurite.AzuriteAccess;
@@ -46,11 +45,5 @@ public class ITFileOperationsImplWithADLS extends BaseITFileOperationsImpl {
   @Override
   protected FileIO createFileIO() {
     return new ADLSFileIO();
-  }
-
-  @Override
-  @Disabled("Azurite is incompatible with ADLS v2 list-prefix REST endpoint")
-  public void icebergIntegration() throws Exception {
-    super.icebergIntegration();
   }
 }
