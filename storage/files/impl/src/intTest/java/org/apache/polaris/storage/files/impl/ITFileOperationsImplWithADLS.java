@@ -22,6 +22,7 @@ package org.apache.polaris.storage.files.impl;
 import java.util.Map;
 import org.apache.iceberg.azure.adlsv2.ADLSFileIO;
 import org.apache.iceberg.io.FileIO;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.projectnessie.testing.azurite.Azurite;
 import org.projectnessie.testing.azurite.AzuriteAccess;
@@ -45,5 +46,16 @@ public class ITFileOperationsImplWithADLS extends BaseITFileOperationsImpl {
   @Override
   protected FileIO createFileIO() {
     return new ADLSFileIO();
+  }
+
+  // ADLSFileIO#listPrefix delegates to the Azure Data Lake Storage v2 list-paths REST endpoint,
+  // which Azurite returns 400 for. The smoke test calls FileOperationsImpl#findFiles which uses
+  // exactly that endpoint, so it cannot run against the Azurite emulator. This same limitation
+  // caused PR #3256 to disable its icebergIntegration test on ADLS. The smoke test still runs in
+  // S3 (Minio) and GCS (fake-gcs-server) IT subclasses and remains valid against real Azure ADLS.
+  @Override
+  @Disabled("Azurite is incompatible with ADLS v2 list-prefix REST endpoint")
+  public void singleFileRoundTrip() throws Exception {
+    super.singleFileRoundTrip();
   }
 }
