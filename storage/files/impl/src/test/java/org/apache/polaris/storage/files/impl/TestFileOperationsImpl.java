@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -182,6 +183,53 @@ class TestFileOperationsImpl extends BaseFileOperationsImpl {
 
       try (Stream<FileSpec> files = fileOps.findFiles(PREFIX, FileFilter.alwaysTrue())) {
         assertThat(files).hasSize(numFiles - deletes);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // findFiles relative- vs absolute-path handling. Iceberg's ADLSFileIO returns
+  // *relative* paths from listPrefix; S3FileIO and GCSFileIO return absolute paths.
+  // FileOperationsImpl.findFiles handles both by resolving relative entries against
+  // the requested prefix. The ADLS branch is otherwise difficult to cover: Azurite
+  // is incompatible with the ADLS v2 list-prefix REST endpoint, which is why
+  // ITFileOperationsImplWithADLS#icebergIntegration is @Disabled. Driving the
+  // branch directly through MockFileIO tests the Polaris contract without
+  // depending on either a real cloud SDK or an ADLS HTTP emulator.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  public void findFilesPrependsPrefixForRelativeAdlsStyleListings() throws Exception {
+    var relativePaths = List.of("alpha", "beta/one", "beta/two", "gamma/three/four");
+    try (var fileIO =
+        MockFileIO.withSyntheticListing(
+            prefix -> relativePaths.stream().map(p -> new FileInfo(p, 0L, 0L)))) {
+
+      var fileOps = new FileOperationsImpl(fileIO);
+      try (Stream<FileSpec> files = fileOps.findFiles(PREFIX, FileFilter.alwaysTrue())) {
+        assertThat(files)
+            .extracting(FileSpec::location)
+            .containsExactlyInAnyOrder(
+                PREFIX + "alpha",
+                PREFIX + "beta/one",
+                PREFIX + "beta/two",
+                PREFIX + "gamma/three/four");
+      }
+    }
+  }
+
+  @Test
+  public void findFilesLeavesAbsoluteS3GcsStylePathsUnchanged() throws Exception {
+    var absolutePaths = List.of(PREFIX + "alpha", PREFIX + "beta/one", PREFIX + "gamma/two");
+    try (var fileIO =
+        MockFileIO.withSyntheticListing(
+            prefix -> absolutePaths.stream().map(p -> new FileInfo(p, 0L, 0L)))) {
+
+      var fileOps = new FileOperationsImpl(fileIO);
+      try (Stream<FileSpec> files = fileOps.findFiles(PREFIX, FileFilter.alwaysTrue())) {
+        assertThat(files)
+            .extracting(FileSpec::location)
+            .containsExactlyInAnyOrderElementsOf(absolutePaths);
       }
     }
   }
